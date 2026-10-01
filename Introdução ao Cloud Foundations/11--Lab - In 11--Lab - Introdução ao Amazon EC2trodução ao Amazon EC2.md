@@ -94,16 +94,6 @@ Com a *termination protection* ativa, a tentativa de terminar a instância **fal
 
 ---
 
-## 📸 Evidências
-
-<!-- Adicione aqui seus prints do lab. Exemplos:
-![Instância em execução](./img/instancia-running.png)
-![Página do servidor web](./img/hello-web-server.png)
-![Erro da proteção contra encerramento](./img/termination-protection.png)
--->
-
----
-
 ## 📚 Próximos passos
 
 - [ ] Praticar conexão segura com **par de chaves / Session Manager**
