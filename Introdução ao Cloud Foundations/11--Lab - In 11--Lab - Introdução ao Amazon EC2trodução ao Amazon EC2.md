@@ -1,73 +1,41 @@
-# AWS re/Start — Lab: Introduction to Amazon EC2
+# ☁️ AWS re/Start — Introduction to Amazon EC2
 
-> ⏱️ Duração aproximada: **45 minutos**
+Laboratório prático do programa **AWS re/Start** em que lancei, monitorei, protegi, redimensionei e encerrei uma instância **Amazon EC2** rodando um servidor web Apache.
 
-## Visão geral
-
-O **Amazon EC2 (Elastic Compute Cloud)** é um serviço web que fornece capacidade computacional redimensionável na nuvem. Principais vantagens:
-
-- Obtém e configura capacidade com o mínimo de esforço
-- Controle completo dos recursos de computação
-- Novas instâncias sobem em **minutos**
-- Escala para mais ou para menos conforme a necessidade
-- **Paga só pelo que usa**
-- Ajuda a criar aplicações resistentes a falhas
-
-## Objetivos do lab
-
-- [x] Iniciar um servidor web com **proteção contra encerramento** ativada
-- [x] Monitorar a instância EC2
-- [x] Modificar o **security group** para permitir acesso HTTP
-- [x] Redimensionar a instância conforme a necessidade
-- [x] Testar a proteção contra encerramento
-- [x] Terminar a instância
+![AWS](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonaws&logoColor=white)
+![Linux](https://img.shields.io/badge/Amazon_Linux-2023-232F3E?logo=linux&logoColor=white)
+![Apache](https://img.shields.io/badge/Apache-httpd-D22128?logo=apache&logoColor=white)
+![Status](https://img.shields.io/badge/status-concluído-success)
 
 ---
 
-## Acessando o console da AWS
+## 🎯 Objetivo do laboratório
 
-1. Clique em **Start Lab** (canto superior direito).
-2. Aguarde o círculo ao lado de **AWS** ficar **verde** (🔴 não iniciado · 🟡 iniciando · 🟢 pronto).
-3. Clique no círculo verde — abre o Console de Gerenciamento da AWS em nova aba (login automático).
+Entender, na prática, o ciclo de vida de um servidor na nuvem: do lançamento ao encerramento, passando por rede, monitoramento, escalabilidade e proteção contra erros humanos.
 
-> 💡 Erro **Access Denied**? Feche a caixa de erro e clique em **Start Lab** de novo.
-> 💡 Aba não abriu? Provavelmente o navegador bloqueou pop-ups — permita.
-> ⚠️ **Não altere a Região** do laboratório.
+## 🧩 O que eu fiz
+
+1. **Lancei** uma instância EC2 (`t3.micro`, Amazon Linux 2023) dentro de uma VPC dedicada
+2. **Automatizei** a instalação do Apache com um script de *user data*
+3. **Monitorei** a instância com status checks, métricas do CloudWatch e captura de tela do console
+4. **Configurei** o security group para liberar tráfego HTTP (porta 80)
+5. **Redimensionei** a instância (`t3.micro` → `t3.small`) e o disco (8 GiB → 10 GiB)
+6. **Testei** a proteção contra encerramento e depois **terminei** a instância
 
 ---
 
-## Tarefa 1: Iniciar a instância EC2
+## 🧠 O que eu aprendi
 
-**Caminho:** Serviços → **EC2** → Painel do EC2 → **Executar instância**
+### 1. Como funciona o EC2 e a ideia de "pagar pelo que usa"
+O EC2 entrega servidores virtuais que sobem em minutos e podem ser aumentados ou diminuídos conforme a necessidade. Em vez de comprar hardware, eu pago só pela capacidade que uso, e isso muda bastante a forma de pensar em infraestrutura.
 
-### Etapa 1 — Nome
-- **Name:** `Web Server`
+### 2. AMI, tipo de instância e volume EBS
+- **AMI**: o "molde" da instância (sistema operacional, permissões de execução e volumes). Usei a Amazon Linux 2023.
+- **Tipo de instância**: combinação de CPU, memória e rede. A `t3.micro` tem 2 vCPUs e 1 GiB de RAM.
+- **EBS**: o disco virtual conectado pela rede, onde fica o volume raiz.
 
-### Etapa 2 — AMI
-- Manter **Amazon Linux 2023** (padrão do Quick Start).
-- A AMI inclui: template do volume-raiz (SO/aplicações), permissões de execução e mapeamento de dispositivos de blocos.
-
-### Etapa 3 — Tipo de instância
-- **t3.micro** (2 vCPUs, 1 GiB de memória)
-
-### Etapa 4 — Par de chaves
-- **Proceed without a key pair (Not recommended)** — neste lab não vamos fazer login na instância.
-
-### Etapa 5 — Rede
-- Painel *Network settings* → **Editar**
-- **VPC:** `Lab VPC`
-- **Security group name:** `Web Server security group`
-- **Descrição:** `Security group for my web server`
-- **Regras de entrada:** clicar em **Remover** (sem SSH, para reforçar a segurança)
-
-> 🔥 Um **security group** funciona como um **firewall virtual** que controla o tráfego de entrada e saída das instâncias. Mudanças nas regras são aplicadas automaticamente.
-
-### Etapa 6 — Armazenamento
-- Manter o padrão: volume raiz **EBS de 8 GiB**.
-
-### Etapa 7 — Detalhes avançados
-- **Termination protection:** `Enable`
-- **User data** (cole o script abaixo):
+### 3. Automação com *user data*
+Em vez de entrar na máquina e instalar tudo na mão, passei um script que roda no primeiro boot:
 
 ```bash
 #!/bin/bash
@@ -77,118 +45,75 @@ systemctl start httpd
 echo '<html><h1>Hello From Your Web Server!</h1></html>' > /var/www/html/index.html
 ```
 
-**O que o script faz:**
-1. Instala o servidor web **Apache (httpd)**
-2. Configura para iniciar automaticamente no boot
-3. Inicia o servidor web
-4. Cria uma página web simples
+Esse script instala o Apache, configura para iniciar com o sistema, sobe o serviço e cria a página inicial. Entendi que **infraestrutura pode ser reproduzível**: a mesma instância pode ser recriada com o mesmo resultado.
 
-### Etapa 8 — Executar
-- **Executar instância** → **Visualizar todas as instâncias**
-- Estados: `Pendente` → `Em execução`
-- Aguardar: **Estado = Em execução** e **Verificações de status = 2/2 aprovadas**
+### 4. Security group é um firewall (e ele bloqueia tudo por padrão)
+Depois de subir o servidor, **não consegui acessá-lo pelo navegador**. O motivo: o security group não tinha regra de entrada para a **porta 80**. Ao adicionar uma regra `HTTP` com origem `IPv4 em qualquer lugar`, a página "Hello From Your Web Server!" apareceu.
 
----
+> **Lição:** na AWS o padrão é *negar*. Só trafega o que eu libero explicitamente. Também removi o acesso SSH de propósito, o que reduz a superfície de ataque.
 
-## Tarefa 2: Monitorar a instância
+*(Em um ambiente real, eu restringiria a origem a IPs específicos em vez de liberar para qualquer lugar, sempre que possível.)*
 
-- Aba **Status checks**: confira que *System reachability* e *Instance reachability* foram aprovadas.
-- Aba **Monitoring**: métricas do **Amazon CloudWatch**.
-  - Monitoramento **básico** (5 min) vem ativado por padrão.
-  - Monitoramento **detalhado** (1 min) pode ser ativado.
-- **Ações → Monitorar e solucionar problemas → Get Instance Screenshot**
-  - Útil quando você não consegue acessar via SSH/RDP: mostra como seria a tela do console.
-  - Depois, clique em **Cancelar**.
+### 5. Monitoramento
+- **Status checks** (acessibilidade do sistema e da instância) mostram se a AWS detectou problemas de hardware ou software
+- **CloudWatch** coleta métricas: monitoramento básico a cada 5 minutos e detalhado a cada 1 minuto
+- A **captura de tela da instância** ajuda a diagnosticar quando não dá para acessar via SSH/RDP
 
----
+### 6. Redimensionamento (escalar para cima)
+Para trocar o tipo da instância, é preciso **interromper** primeiro. Depois alterei para `t3.small` (o dobro de memória) e aumentei o volume EBS de 8 para 10 GiB.
 
-## Tarefa 3: Atualizar o security group e acessar o servidor web
+> **Detalhe de custo:** instância interrompida não cobra computação, mas o **armazenamento EBS continua sendo cobrado**.
 
-1. Aba **Details** → copie o **Public IPv4 address**.
-2. Cole em uma nova aba do navegador e dê Enter.
-
-**❓ Você consegue acessar o servidor web? Por quê?**
-**Não.** O security group não permite tráfego de entrada na **porta 80** (HTTP). Isso demonstra o security group funcionando como firewall.
-
-**Corrigindo:**
-
-1. Menu esquerdo → **Network & Security → Security Groups**
-2. Selecione **Web Server security group**
-3. Aba **Inbound rules** → **Editar regras de entrada** → **Adicionar regra**
-   - **Tipo:** `HTTP`
-   - **Origem:** `IPv4 em qualquer lugar` (Anywhere-IPv4)
-4. **Salvar regras**
-5. Atualize a aba do navegador → deve aparecer: **Hello From Your Web Server!** ✅
+### 7. Proteção contra encerramento
+Com a *termination protection* ativa, a tentativa de terminar a instância **falhou com erro**, o que evita exclusões acidentais. Para terminar de verdade, tive que desativar a proteção primeiro. Instância terminada não pode ser reiniciada, e o volume raiz é excluído por padrão.
 
 ---
 
-## Tarefa 4: Redimensionar a instância (tipo + volume EBS)
+## 🛠️ Conceitos e serviços praticados
 
-> Instância **subutilizada** (grande demais) ou **superutilizada** (pequena demais) → dá para mudar o tipo. O disco também pode crescer.
-
-### 4.1 Interromper a instância
-- **Instances** → **Estado da instância → Interromper instância** → **Interromper**
-- Aguarde `Stopped`.
-
-> 💰 Instância interrompida **não gera cobrança de computação**, mas o **armazenamento EBS** conectado continua sendo cobrado.
-
-### 4.2 Alterar o tipo
-- **Ações → Configurações de instância → Alterar tipo de instância**
-- **Tipo:** `t3.small` (o dobro de memória do t3.micro)
-
-### 4.3 Redimensionar o volume EBS
-- Menu esquerdo → **Elastic Block Store → Volumes**
-- Selecione o volume → **Ações → Modificar volume**
-- **Tamanho:** de `8` para `10` GiB → **Modificar** → confirmar
-
-### 4.4 Iniciar de novo
-- **Instances** → selecione `Web Server` → **Estado da instância → Iniciar instâncias**
-
-**Resultado:** `t3.micro` → `t3.small` e disco `8 GiB` → `10 GiB` ✅
-
-> ⚠️ O lab pode restringir outros tipos de instância e volumes grandes.
-
----
-
-## Tarefa 5: Testar a proteção contra encerramento
-
-1. **Instances** → selecione `Web Server` → **Estado da instância → Encerrar (excluir) instância** → **Encerrar**
-2. **Resultado:** aparece um erro vermelho — *"Falha ao terminar uma instância"* — porque a **proteção contra encerramento** está ativa. 🛡️
-3. Desativar a proteção:
-   - **Ações → Configurações de instância → Change termination protection**
-   - Desmarque **Enable** → **Save**
-4. Agora sim: **Ações → Estado da instância → Terminate instance** → **Encerrar**
-
-> Em instâncias baseadas em EBS, o volume raiz é **excluído por padrão** ao terminar a instância. Instância terminada **não pode** ser reconectada nem reiniciada.
-
----
-
-## Encerrando o lab
-
-1. **End Lab** (topo da página) → **Yes**
-2. Aparece *"DELETE has been initiated..."* e depois *"Ended AWS Lab Successfully"*.
-
----
-
-## 📌 Resumo rápido / cola
-
-| Conceito | O que é |
+| Conceito | O que significa |
 |---|---|
-| **EC2** | Servidores virtuais redimensionáveis na nuvem |
-| **AMI** | Template para iniciar a instância (SO + config) |
-| **Tipo de instância** | Combinação de CPU, memória, armazenamento e rede (ex.: `t3.micro`) |
-| **Par de chaves** | Chave pública/privada para login seguro (SSH/RDP) |
-| **Security group** | Firewall virtual da instância (regras de entrada/saída) |
-| **EBS** | Disco virtual anexado pela rede (volume raiz de 8 GiB no lab) |
-| **User data** | Script executado no primeiro boot da instância |
-| **Termination protection** | Impede encerramento acidental da instância |
-| **CloudWatch** | Métricas e monitoramento (básico 5 min / detalhado 1 min) |
-| **Porta 80** | HTTP — precisa estar liberada no security group |
+| EC2 | Servidores virtuais na nuvem |
+| AMI | Template para iniciar instâncias |
+| Tipos de instância | CPU, memória e rede (`t3.micro`, `t3.small`) |
+| EBS | Disco virtual da instância |
+| VPC | Rede privada virtual onde a instância roda |
+| Security Group | Firewall virtual de entrada e saída |
+| User data | Script de configuração no primeiro boot |
+| CloudWatch | Métricas e monitoramento |
+| Termination protection | Proteção contra encerramento acidental |
 
-## ✅ O que eu aprendi
+## ✅ Boas práticas que levo daqui
 
-- Como lançar uma instância EC2 com script de **user data**
-- Como o **security group** bloqueia/libera tráfego
-- Como monitorar com **status checks** e **CloudWatch**
-- Como **redimensionar** tipo de instância e volume EBS (precisa **parar** antes)
-- Como a **proteção contra encerramento** evita exclusões acidentais
+- Dar **nomes e tags** claros aos recursos (`Web Server`)
+- Aplicar **menor privilégio** na rede (liberar só o necessário)
+- **Automatizar** configurações em vez de fazer tudo manualmente
+- Ativar **proteção contra encerramento** em recursos importantes
+- Ficar atento a **custos** de recursos parados (EBS)
+- **Encerrar** os recursos ao final para não gerar cobrança
+
+---
+
+## 📸 Evidências
+
+<!-- Adicione aqui seus prints do lab. Exemplos:
+![Instância em execução](./img/instancia-running.png)
+![Página do servidor web](./img/hello-web-server.png)
+![Erro da proteção contra encerramento](./img/termination-protection.png)
+-->
+
+---
+
+## 📚 Próximos passos
+
+- [ ] Praticar conexão segura com **par de chaves / Session Manager**
+- [ ] Explorar **Elastic IP** e **Load Balancer**
+- [ ] Estudar **Auto Scaling**
+- [ ] Documentar os próximos labs do re/Start neste repositório
+
+---
+
+## 👤 Autor
+
+**Werther Crisley**
+🔗 [GitHub](https://github.com/WertherCrisley)
