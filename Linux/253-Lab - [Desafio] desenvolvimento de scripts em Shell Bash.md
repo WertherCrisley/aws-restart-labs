@@ -139,11 +139,11 @@ done
 
 ## 📸 Evidências
 
-![Labs Report](../assets/desafioLinux/Par1.png)
+![Labs Report](../assets/desafioLinux/Part1.png)
 
-![Labs Report](../assets/desafioLinux/Par2.png)
+![Labs Report](../assets/desafioLinux/Part2.png)
 
-![Labs Report](../assets/desafioLinux/Par3.png)
+![Labs Report](../assets/desafioLinux/Part3.png)
 
 
 ## 📚 Próximos passos
